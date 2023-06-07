@@ -10,7 +10,9 @@ RUN rm *.mod *.sum && go mod init mmdbverify && go get -u && go build && mv mmdb
 FROM alpine:edge
 RUN apk add --no-cache curl unzip git
 COPY build.sh /usr/bin/
+COPY test.yaml /usr/bin/
 COPY --from=builder /mmdb/* /usr/bin/
+COPY --from=sliamb/prebuild-paopaodns /src/mosdns /usr/bin/
 RUN chmod +x /usr/bin/*
 WORKDIR /data
 ENV MMDB_KEY=KEY

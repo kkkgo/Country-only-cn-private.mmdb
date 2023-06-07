@@ -26,13 +26,26 @@ else
 fi
 mmdb_size=$(wc -c <"/tmp/Country-only-cn-private.mmdb")
 
-if [ "$mmdb_size" -gt 100000 ]; then
+if [ "$mmdb_size" -gt 250000 ]; then
     echo "mmdb_size pass."
 else
     echo "mmdb_size failed"
     cp /mmdb_size /
     exit
 fi
+
+mosdns start -d /usr/bin -c test.yaml &
+sleep 3
+nslookup test1.dns 127.0.0.1
+nslookup test2.dns 127.0.0.1
+nslookup test3.dns 127.0.0.1
+nslookup test4.dns 127.0.0.1
+nslookup test5.dns 127.0.0.1
+nslookup test6.dns 127.0.0.1
+nslookup test7.dns 127.0.0.1
+nslookup test8.dns 127.0.0.1
+nslookup test9.dns 127.0.0.1
+nslookup test0.dns 127.0.0.1
 
 if [ -f /tmp/Country-only-cn-private.mmdb ]; then
     md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
