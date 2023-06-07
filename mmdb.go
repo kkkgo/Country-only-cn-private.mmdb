@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/maxmind/mmdbwriter"
-	"github.com/maxmind/mmdbwriter/inserter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
 )
 
@@ -24,7 +23,7 @@ var PRIVATE = mmdbtype.Map{
 
 func mmdbLocal(cidr string) {
 	_, IP, _ := net.ParseCIDR(cidr)
-	writer.InsertFunc(IP, inserter.TopLevelMergeWith(PRIVATE))
+	writer.Insert(IP, PRIVATE)
 }
 func mmdbInsert(cidr string) bool {
 	_, IP, err := net.ParseCIDR(cidr)
@@ -32,7 +31,7 @@ func mmdbInsert(cidr string) bool {
 		log.Fatal(err)
 		return false
 	}
-	if err := writer.InsertFunc(IP, inserter.TopLevelMergeWith(CN)); err != nil {
+	if err := writer.Insert(IP, CN); err != nil {
 		log.Fatal(err)
 		return false
 	}
@@ -102,17 +101,12 @@ func importCSV(filename string) {
 	}
 }
 func main() {
-	Description := make(map[string]string)
-	Description["CN"] = "CN"
-	Description["PRIVATE"] = "PRIVATE"
 	writer, _ = mmdbwriter.New(
 		mmdbwriter.Options{
 			IncludeReservedNetworks: true,
-			DatabaseType:            "mmdb",
-			DisableIPv4Aliasing:     true,
-			IPVersion:               6,
+			DatabaseType:            "GeoLite2-Country",
 			RecordSize:              24,
-			Description:             Description,
+			Description:             map[string]string{"en": "GeoLite2 Country database"},
 		})
 	importLocal()
 	importTXT("/tmp/data/china_ip_list.txt")
