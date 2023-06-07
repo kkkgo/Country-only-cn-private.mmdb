@@ -1,0 +1,45 @@
+log:
+    file: ""
+    level: debug
+
+plugins:
+
+  - tag: cnip
+    type: mmdb
+    args:
+      file: "/data/Country-only-cn-private.mmdb"
+
+  - tag: main_sequence
+    type: sequence
+    args:
+        - matches: qname test1.dns
+          exec: black_hole 114.114.114.114 2400:3200:baba::1
+        - matches: qname test2.dns
+          exec: black_hole 119.29.29.29 2402:4e00::1
+        - matches: qname test3.dns
+          exec: black_hole 223.5.5.5 2400:da00::6666
+        - matches: qname test3.dns
+          exec: black_hole 180.76.76.76 240e:4c:4008::1
+        - matches: qname test4.dns
+          exec: black_hole 101.226.4.6 2408:8899::8
+        - matches: qname test5.dns
+          exec: black_hole 218.30.118.6 2409:8088::a
+        - matches: qname test6.dns
+          exec: black_hole 123.125.81.6 240C::6666
+        - matches: qname test7.dns
+          exec: black_hole 140.207.198.6 2001:dc7:1000::1
+        - matches: qname test8.dns
+          exec: black_hole 1.2.4.8 2001:da8:8000:1:202:120:2:100
+        - matches: qname test9.dns
+          exec: black_hole 117.50.10.10 2001:cc0:2fff:1::6666
+        - matches: qname test0.dns
+          exec: black_hole 52.80.52.52 2001:da8:208:10::6
+        - matches: resp_ip_mmdb $cnip CN
+          exec: accept
+        - exec: reject 3
+
+  - tag: udp_server
+    type: udp_server
+    args:
+      entry: main_sequence
+      listen: :53
