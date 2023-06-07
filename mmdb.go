@@ -109,7 +109,7 @@ func main() {
 		mmdbwriter.Options{
 			IncludeReservedNetworks: true,
 			DatabaseType:            "mmdb",
-			DisableIPv4Aliasing:     true,
+			DisableIPv4Aliasing:     false,
 			IPVersion:               6,
 			RecordSize:              24,
 			Description:             Description,
