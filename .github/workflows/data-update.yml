@@ -1,0 +1,27 @@
+name: data-update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '01 01 * * *'
+permissions:
+  contents: write
+
+jobs:
+  update_data:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Update data
+      run: docker run -v $(pwd):/data -e MMDB_KEY=${{ secrets.MMDB_KEY }} sliamb/mmdb
+    - uses: EndBug/add-and-commit@v9
+      with:
+        author_name: Github Actions
+        author_email: actions@github.com
+        committer_email: actions@github.com
+    - name: Flash CDN
+      run: |
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb.md5sum &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb.sha256sum &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb
