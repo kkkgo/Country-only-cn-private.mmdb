@@ -7,7 +7,7 @@ plugins:
   - tag: cnip
     type: mmdb
     args:
-      file: "/data/Country-only-cn-private.mmdb"
+      file: "/tmp/Country-only-cn-private.mmdb"
 
   - tag: main_sequence
     type: sequence
