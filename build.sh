@@ -46,7 +46,7 @@ nslookup test7.dns 127.0.0.1
 nslookup test8.dns 127.0.0.1
 nslookup test9.dns 127.0.0.1
 nslookup test0.dns 127.0.0.1
-
+echo "DNS TEST PASS !"
 if [ -f /tmp/Country-only-cn-private.mmdb ]; then
     md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
     mmdb_sha256=$(sha256sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1)
