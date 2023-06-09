@@ -1,6 +1,6 @@
 # Country-only-cn-private.mmdb
 
-Country-only-cn-private.mmdb contains CIDR address ranges for mainland China (`GEOIP:CN`) and private IP address ranges (`GEOIP:PRIVATE`). The data for the mainland China address ranges is sourced from [IPIP.NET](https://github.com/17mon/china_ip_list) and [MaxMind](https://www.maxmind.com/), and it is automatically updated daily. This database is intended for non-commercial use only.
+Country-only-cn-private.mmdb contains CIDR address ranges for mainland China (`GEOIP:CN`) and private IP address ranges (`GEOIP:PRIVATE`). The data for the mainland China address ranges is sourced from [IPIP.NET](https://github.com/17mon/china_ip_list) and [MaxMind](https://www.maxmind.com/), and it is automatically updated every Thursday. This database is intended for non-commercial use only.
 
 You can download the Country-only-cn-private.mmdb file from the following locations:
 ## Country-only-cn-private.mmdb
