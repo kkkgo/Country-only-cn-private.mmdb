@@ -94,7 +94,7 @@ func importCSV(filename string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if record[1] == "1814991" {
+		if record[1] == "1814991" && record[2] == "1814991" {
 			cidr := record[0]
 			mmdbInsert(cidr)
 		}
