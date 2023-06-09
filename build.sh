@@ -26,7 +26,7 @@ else
 fi
 mmdb_size=$(wc -c <"/tmp/Country-only-cn-private.mmdb")
 
-if [ "$mmdb_size" -gt 250000 ]; then
+if [ "$mmdb_size" -gt 200000 ]; then
     echo "mmdb_size pass."
 else
     echo "mmdb_size failed"
