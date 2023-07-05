@@ -55,7 +55,7 @@ if [ -f /tmp/Country-only-cn-private.mmdb ]; then
     cat /data/Country-only-cn-private.mmdb.md5sum
     echo Gen sha256sum:
     cat /data/Country-only-cn-private.mmdb.sha256sum
-    mv /tmp/Country-only-cn-private.mmdb /data/Country-only-cn-private.mmdb
+    cp /tmp/Country-only-cn-private.mmdb /data/Country-only-cn-private.mmdb
     mmdb_cp_sha256=$(sha256sum /data/Country-only-cn-private.mmdb | cut -d" " -f1)
     if mmdbverify -file /data/Country-only-cn-private.mmdb && [ "$mmdb_sha256" = "$mmdb_cp_sha256" ]; then
         echo "Copy mmdbverify pass."
@@ -64,7 +64,11 @@ if [ -f /tmp/Country-only-cn-private.mmdb ]; then
         cp /cp_mmdbverify /
         exit
     fi
-    cd /data || exit
-    xz -9 -k -e /data/Country-only-cn-private.mmdb
-    sha256sum /data/Country-only-cn-private.mmdb.xz | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.xz.sha256sum
+    mkdir -p /tmp/xz
+    cp /tmp/Country-only-cn-private.mmdb /tmp/xz/
+    cd /tmp/xz || exit
+    xz -9 -k -e /tmp/xz/Country-only-cn-private.mmdb
+    sha256sum /tmp/xz/Country-only-cn-private.mmdb.xz | cut -d" " -f1 >/tmp/xz/Country-only-cn-private.mmdb.xz.sha256sum
+    mv /tmp/xz/Country-only-cn-private.mmdb.xz /data/Country-only-cn-private.mmdb.xz
+    mv /tmp/xz/Country-only-cn-private.mmdb.xz.sha256sum /data/Country-only-cn-private.mmdb.xz.sha256sum
 fi
