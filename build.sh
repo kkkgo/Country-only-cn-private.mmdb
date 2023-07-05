@@ -64,4 +64,7 @@ if [ -f /tmp/Country-only-cn-private.mmdb ]; then
         cp /cp_mmdbverify /
         exit
     fi
+    cd /data || exit
+    xz -9 -k -e /data/Country-only-cn-private.mmdb
+    sha256sum /data/Country-only-cn-private.mmdb.xz | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.sha256sum
 fi
