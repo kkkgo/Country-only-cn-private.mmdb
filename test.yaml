@@ -35,7 +35,7 @@ plugins:
         - matches: qname test0.dns
           exec: black_hole 52.80.52.52 2001:da8:208:10::6
         - matches: resp_ip_mmdb $cnip CN
-          exec: accept
+          exec: ok
         - exec: reject 3
 
   - tag: udp_server
