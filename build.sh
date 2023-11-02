@@ -2,6 +2,16 @@
 rm -rf /tmp/*
 set -e
 git clone https://github.com/17mon/china_ip_list.git --depth 1 /tmp/data/
+IPREX4='([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+v4check() {
+    if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX4"; then
+        echo "$1" pass.
+    else
+        cp dns_check_failed /
+        echo "$1" failed.
+        exit
+    fi
+}
 
 curl -sLo /tmp/GeoLite2-Country-CSV.zip "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country-CSV&license_key=${MMDB_KEY}&suffix=zip"
 mmdb_hash=$(sha256sum /tmp/GeoLite2-Country-CSV.zip | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
@@ -36,16 +46,26 @@ fi
 
 mosdns start -d /usr/bin -c test.yaml &
 sleep 3
-nslookup test1.dns 127.0.0.1
-nslookup test2.dns 127.0.0.1
-nslookup test3.dns 127.0.0.1
-nslookup test4.dns 127.0.0.1
-nslookup test5.dns 127.0.0.1
-nslookup test6.dns 127.0.0.1
-nslookup test7.dns 127.0.0.1
-nslookup test8.dns 127.0.0.1
-nslookup test9.dns 127.0.0.1
-nslookup test0.dns 127.0.0.1
+t1=$(dig test1.dns @127.0.0.1 -p53 A +short)
+v4check "$t1"
+t2=$(dig test2.dns @127.0.0.1 -p53 A +short)
+v4check "$t2"
+t3=$(dig test3.dns @127.0.0.1 -p53 A +short)
+v4check "$t3"
+t4=$(dig test4.dns @127.0.0.1 -p53 A +short)
+v4check "$t4"
+t5=$(dig test5.dns @127.0.0.1 -p53 A +short)
+v4check "$t5"
+t6=$(dig test6.dns @127.0.0.1 -p53 A +short)
+v4check "$t6"
+t7=$(dig test7.dns @127.0.0.1 -p53 A +short)
+v4check "$t7"
+t8=$(dig test8.dns @127.0.0.1 -p53 A +short)
+v4check "$t8"
+t9=$(dig test9.dns @127.0.0.1 -p53 A +short)
+v4check "$t9"
+t0=$(dig test0.dns @127.0.0.1 -p53 A +short)
+v4check "$t0"
 echo "DNS TEST PASS !"
 if [ -f /tmp/Country-only-cn-private.mmdb ]; then
     md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
