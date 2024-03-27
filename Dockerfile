@@ -1,5 +1,5 @@
 FROM alpine:edge AS builder
-RUN apk add --no-cache go git
+RUN apk upgrade&&apk add --no-cache go git
 COPY mmdb.go /tmp/mmdb/
 WORKDIR /tmp/mmdb
 RUN go mod init mmdb && go get -u && go build && mkdir -p /mmdb && mv mmdb /mmdb/
