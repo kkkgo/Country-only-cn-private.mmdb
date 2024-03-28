@@ -1,4 +1,5 @@
 #!/bin/sh
+apk update && apk upgrade
 rm -rf /tmp/*
 set -e
 git clone https://github.com/17mon/china_ip_list.git --depth 1 /tmp/data/

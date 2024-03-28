@@ -8,7 +8,7 @@ WORKDIR /tmp/mmdbverify
 RUN rm *.mod *.sum && go mod init mmdbverify && go get -u && go build && mv mmdbverify /mmdb/
 
 FROM alpine:edge
-RUN apk add --no-cache curl unzip git xz bind-tools
+RUN apk upgrade&&apk add --no-cache curl unzip git xz bind-tools
 COPY build.sh /usr/bin/
 COPY test.yaml /usr/bin/
 COPY --from=builder /mmdb/* /usr/bin/
