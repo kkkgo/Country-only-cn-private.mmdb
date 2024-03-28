@@ -15,5 +15,4 @@ COPY --from=builder /mmdb/* /usr/bin/
 COPY --from=sliamb/prebuild-paopaodns /src/mosdns /usr/bin/
 RUN chmod +x /usr/bin/*
 WORKDIR /data
-ENV MMDB_KEY=KEY
 ENTRYPOINT [ "build.sh" ]
