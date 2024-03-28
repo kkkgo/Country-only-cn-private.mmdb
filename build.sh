@@ -15,7 +15,7 @@ v4check() {
 }
 
 
-curl -sLO -u ${YOUR_ACCOUNT_ID}:${YOUR_LICENSE_KEY} 'https://download.maxmind.com/geoip/databases/GeoIP2-City-CSV/download?suffix=zip'
+curl -sL -O /tmp/GeoLite2-Country-CSV.zip -u ${YOUR_ACCOUNT_ID}:${YOUR_LICENSE_KEY} 'https://download.maxmind.com/geoip/databases/GeoIP2-City-CSV/download?suffix=zip'
 mmdb_hash=$(sha256sum /tmp/GeoLite2-Country-CSV.zip | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 mmdb_down_hash=$(curl -sLO -u ${YOUR_ACCOUNT_ID}:${YOUR_LICENSE_KEY} 'https://download.maxmind.com/geoip/databases/GeoIP2-City-CSV/download?suffix=zip.sha256' | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 if [ "$mmdb_down_hash" != "$mmdb_hash" ]; then
