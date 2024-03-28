@@ -14,7 +14,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Update data
-      run: docker run -v $(pwd):/data -e MMDB_KEY=${{ secrets.MMDB_KEY }} sliamb/mmdb
+      run: docker run -v $(pwd):/data -e YOUR_ACCOUNT_ID=${{ secrets.YOUR_ACCOUNT_ID}} -e ${{ secrets.YOUR_LICENSE_KEY }} sliamb/mmdb
     - uses: EndBug/add-and-commit@v9
       with:
         author_name: Github Actions
