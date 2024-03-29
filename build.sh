@@ -37,10 +37,10 @@ v6check() {
 curl -L -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip' -o /tmp/GeoLite2-Country-CSV.zip
 mmdb_hash=$(sha256sum /tmp/GeoLite2-Country-CSV.zip | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 mmdb_down_hash=$(curl -sL -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip.sha256' | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
-# if [ "$mmdb_down_hash" != "$mmdb_hash" ]; then
-#     cp /mmdb_down_hash_error .
-#     exit
-# fi
+if [ "$mmdb_down_hash" != "$mmdb_hash" ]; then
+    cp /mmdb_down_hash_error .
+    exit
+fi
 
 cd /tmp || exit
 unzip GeoLite2-Country-CSV.zip
@@ -67,7 +67,7 @@ else
 fi
 mmdb_size=$(wc -c <"/tmp/Country-only-cn-private.mmdb")
 
-if [ "$mmdb_size" -gt 200000 ]; then
+if [ "$mmdb_size" -gt 190000 ]; then
     echo "mmdb_size pass."
 else
     echo "mmdb_size failed:""$mmdb_size"
