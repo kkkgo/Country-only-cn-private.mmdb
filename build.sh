@@ -8,8 +8,8 @@ v4check() {
     if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX4"; then
         echo "$1" pass.
     else
-        cp dns_check_failed /
         echo "$1" failed.
+        cp dns_check_failed /
         exit
     fi
 }
@@ -17,8 +17,8 @@ v4checkb() {
     if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep "NXDOMAIN"; then
         echo "$1" pass.
     else
-        cp dns_check_failed /
         echo "$1" failed.
+        cp dns_check_failed /
         exit
     fi
 }
