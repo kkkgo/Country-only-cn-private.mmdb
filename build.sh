@@ -46,6 +46,16 @@ cd /tmp || exit
 unzip GeoLite2-Country-CSV.zip
 rm GeoLite2-Country-CSV.zip
 mv GeoLite2*/*.csv /tmp/data/
+
+git clone --branch ip-lists --depth 1 https://github.com/gaoyifan/china-operator-ip.git /tmp/china-operator-ip
+if [ -f /tmp/china-operator-ip/china6.txt ];then
+    cp /tmp/china-operator-ip/china6.txt /tmp/data/china6.txt
+else
+    echo "china6 download failed."
+    cp /china6_download_failed
+    exit
+fi
+
 mmdb
 
 if mmdbverify -file /tmp/Country-only-cn-private.mmdb; then
