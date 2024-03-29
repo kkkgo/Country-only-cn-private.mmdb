@@ -76,7 +76,7 @@ v4check "$t9"
 t0=$(dig test0.dns @127.0.0.1 -p53 A +short)
 v4check "$t0"
 tb=$(dig bad.dns @127.0.0.1 -p53 A +short)
-v4check "$tb"
+v4checkb "$tb"
 aaaat1=$(dig aaaatest1.dns @127.0.0.1 -p53 AAAA +short)
 v4check "$aaaat1"
 aaaat2=$(dig aaaatest2.dns @127.0.0.1 -p53 AAAA +short)
@@ -98,7 +98,7 @@ v4check "$aaaat9"
 aaaat0=$(dig aaaatest0.dns @127.0.0.1 -p53 AAAA +short)
 v4check "$aaaat0"
 aaaatb=$(dig aaaabad.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaatb"
+v4checkb "$aaaatb"
 echo "DNS TEST PASS !"
 if [ -f /tmp/Country-only-cn-private.mmdb ]; then
     md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
