@@ -109,7 +109,7 @@ func main() {
 			Description:             map[string]string{"en": "GeoLite2 Country database"},
 		})
 	importLocal()
-	// importCSV("/tmp/data/GeoLite2-City-Blocks-IPv6.csv")
+	importCSV("/tmp/data/GeoLite2-City-Blocks-IPv6.csv")
 	//importCSV("/tmp/data/GeoLite2-Country-Blocks-IPv4.csv")
 	importTXT("/tmp/data/china6.txt")
 	importTXT("/tmp/data/china_ip_list.txt")
