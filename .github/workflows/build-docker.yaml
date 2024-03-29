@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '01 01 * * *'
   workflow_dispatch:
+  push:
+    paths-ignore:
+      - '*.md'
+      - '.github/**'
+      - 'LICENSE'
+      - '*.mmdb'
+      - '*.xz'
+      - '*.md5sum'
+      - '*.sha256sum'
 jobs:
   build:
     runs-on: ubuntu-latest
