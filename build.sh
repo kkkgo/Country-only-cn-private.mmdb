@@ -4,6 +4,8 @@ rm -rf /tmp/*
 set -e
 git clone https://github.com/17mon/china_ip_list.git --depth 1 /tmp/data/
 IPREX4='([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+IPREX6="(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+
 v4check() {
     if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX4"; then
         echo "$1" pass.
@@ -22,6 +24,16 @@ v4checkb() {
         exit
     fi
 }
+v6check() {
+    if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX6"; then
+        echo "$1" pass.
+    else
+        echo "$1" failed.
+        cp dns_check_failed /
+        exit
+    fi
+}
+
 curl -L -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip' -o /tmp/GeoLite2-Country-CSV.zip
 mmdb_hash=$(sha256sum /tmp/GeoLite2-Country-CSV.zip | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 mmdb_down_hash=$(curl -sL -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip.sha256' | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
@@ -78,25 +90,25 @@ v4check "$t0"
 tb=$(dig bad.dns @127.0.0.1 -p53 A +short)
 v4checkb "$tb"
 aaaat1=$(dig aaaatest1.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat1"
+v6check "$aaaat1"
 aaaat2=$(dig aaaatest2.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat2"
+v6check "$aaaat2"
 aaaat3=$(dig aaaatest3.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat3"
+v6check "$aaaat3"
 aaaat4=$(dig aaaatest4.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat4"
+v6check "$aaaat4"
 aaaat5=$(dig aaaatest5.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat5"
+v6check "$aaaat5"
 aaaat6=$(dig aaaatest6.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat6"
+v6check "$aaaat6"
 aaaat7=$(dig aaaatest7.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat7"
+v6check "$aaaat7"
 aaaat8=$(dig aaaatest8.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat8"
+v6check "$aaaat8"
 aaaat9=$(dig aaaatest9.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat9"
+v6check "$aaaat9"
 aaaat0=$(dig aaaatest0.dns @127.0.0.1 -p53 AAAA +short)
-v4check "$aaaat0"
+v6check "$aaaat0"
 aaaatb=$(dig aaaabad.dns @127.0.0.1 -p53 AAAA +short)
 v4checkb "$aaaatb"
 echo "DNS TEST PASS !"
