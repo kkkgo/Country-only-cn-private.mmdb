@@ -13,30 +13,57 @@ plugins:
     type: sequence
     args:
         - matches: qname test1.dns
-          exec: black_hole 114.114.114.114 2400:3200:baba::1
+          exec: black_hole 114.114.114.114
         - matches: qname test2.dns
-          exec: black_hole 119.29.29.29 2402:4e00::1
+          exec: black_hole 119.29.29.29
         - matches: qname test3.dns
-          exec: black_hole 223.5.5.5 2400:da00::6666
+          exec: black_hole 223.5.5.5
         - matches: qname test3.dns
-          exec: black_hole 180.76.76.76 240e:4c:4008::1
+          exec: black_hole 180.76.76.76
         - matches: qname test4.dns
-          exec: black_hole 101.226.4.6 2408:8899::8
+          exec: black_hole 101.226.4.6
         - matches: qname test5.dns
-          exec: black_hole 218.30.118.6 2409:8088::a
+          exec: black_hole 218.30.118.6
         - matches: qname test6.dns
-          exec: black_hole 123.125.81.6 240C::6666
+          exec: black_hole 123.125.81.6
         - matches: qname test7.dns
-          exec: black_hole 140.207.198.6 2001:dc7:1000::1
+          exec: black_hole 140.207.198.6
         - matches: qname test8.dns
-          exec: black_hole 1.2.4.8 2001:da8:8000:1:202:120:2:100
+          exec: black_hole 1.2.4.8
         - matches: qname test9.dns
-          exec: black_hole 117.50.10.10 2001:cc0:2fff:1::6666
+          exec: black_hole 117.50.10.10
         - matches: qname test0.dns
-          exec: black_hole 52.80.52.52 2001:da8:208:10::6
+          exec: black_hole 52.80.52.52
+        - matches: qname aaaatest1.dns
+          exec: black_hole 2400:3200:baba::1
+        - matches: qname aaaatest2.dns
+          exec: black_hole 2402:4e00::1
+        - matches: qname aaaatest3.dns
+          exec: black_hole 2400:da00::6666
+        - matches: qname aaaatest3.dns
+          exec: black_hole 240e:4c:4008::1
+        - matches: qname aaaatest4.dns
+          exec: black_hole 2408:8899::8
+        - matches: qname aaaatest5.dns
+          exec: black_hole 2409:8088::a
+        - matches: qname aaaatest6.dns
+          exec: black_hole 240C::6666
+        - matches: qname aaaatest7.dns
+          exec: black_hole 2001:dc7:1000::1
+        - matches: qname aaaatest8.dns
+          exec: black_hole 2001:da8:8000:1:202:120:2:100
+        - matches: qname aaaatest9.dns
+          exec: black_hole 2001:cc0:2fff:1::6666
+        - matches: qname aaaatest0.dns
+          exec: black_hole 2001:da8:208:10::6
+        - matches: qname bad.dns
+          exec: black_hole 8.8.8.8
+        - matches: qname aaabad.dns
+          exec: black_hole 2a09:bac1:19f0::1
         - matches: resp_ip_mmdb $cnip CN
           exec: ok
-        - exec: reject 3
+        - exec: drop_resp
+        - exec: ok
 
   - tag: udp_server
     type: udp_server

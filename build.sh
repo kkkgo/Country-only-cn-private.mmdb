@@ -13,6 +13,15 @@ v4check() {
         exit
     fi
 }
+v4checkb() {
+    if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep "NXDOMAIN"; then
+        echo "$1" pass.
+    else
+        cp dns_check_failed /
+        echo "$1" failed.
+        exit
+    fi
+}
 curl -L -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip' -o /tmp/GeoLite2-Country-CSV.zip
 mmdb_hash=$(sha256sum /tmp/GeoLite2-Country-CSV.zip | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 mmdb_down_hash=$(curl -sL -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip.sha256' | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
@@ -66,6 +75,30 @@ t9=$(dig test9.dns @127.0.0.1 -p53 A +short)
 v4check "$t9"
 t0=$(dig test0.dns @127.0.0.1 -p53 A +short)
 v4check "$t0"
+tb=$(dig bad.dns @127.0.0.1 -p53 A +short)
+v4check "$tb"
+aaaat1=$(dig aaaatest1.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat1"
+aaaat2=$(dig aaaatest2.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat2"
+aaaat3=$(dig aaaatest3.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat3"
+aaaat4=$(dig aaaatest4.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat4"
+aaaat5=$(dig aaaatest5.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat5"
+aaaat6=$(dig aaaatest6.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat6"
+aaaat7=$(dig aaaatest7.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat7"
+aaaat8=$(dig aaaatest8.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat8"
+aaaat9=$(dig aaaatest9.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat9"
+aaaat0=$(dig aaaatest0.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaat0"
+aaaatb=$(dig aaaabad.dns @127.0.0.1 -p53 AAAA +short)
+v4check "$aaaatb"
 echo "DNS TEST PASS !"
 if [ -f /tmp/Country-only-cn-private.mmdb ]; then
     md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
