@@ -54,6 +54,7 @@ func importLocal() {
 	mmdbLocal("224.0.0.0/4")
 	mmdbLocal("240.0.0.0/4")
 	mmdbLocal("255.255.255.255/32")
+	mmdbLocal("221.228.32.13/32") //jsfz
 	mmdbLocal("::1/128")
 	mmdbLocal("fc00::/7")
 	mmdbLocal("fe80::/10")
