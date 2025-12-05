@@ -52,7 +52,7 @@ if [ -f /tmp/china-operator-ip/china6.txt ];then
     cp /tmp/china-operator-ip/china6.txt /tmp/data/china6.txt
 else
     echo "china6 download failed."
-    cp /china6_download_failed
+    cp /china6_download_failed /
     exit
 fi
 
