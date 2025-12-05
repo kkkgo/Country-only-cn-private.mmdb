@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"mmdb/chinaboundary"
+
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
 )
@@ -25,6 +27,7 @@ func mmdbLocal(cidr string) {
 	_, IP, _ := net.ParseCIDR(cidr)
 	writer.Insert(IP, PRIVATE)
 }
+
 func mmdbInsert(cidr string) bool {
 	_, IP, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -37,6 +40,7 @@ func mmdbInsert(cidr string) bool {
 	}
 	return true
 }
+
 func importLocal() {
 	mmdbLocal("0.0.0.0/8")
 	mmdbLocal("10.0.0.0/8")
@@ -59,6 +63,7 @@ func importLocal() {
 	mmdbLocal("fc00::/7")
 	mmdbLocal("fe80::/10")
 }
+
 func importTXT(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -79,6 +84,7 @@ func importTXT(filename string) {
 		log.Fatal(err)
 	}
 }
+
 func importCSV(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -95,12 +101,25 @@ func importCSV(filename string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		if len(record) < 9 {
+			continue
+		}
+
 		if record[1] == "1814991" && record[2] == "1814991" {
 			cidr := record[0]
 			mmdbInsert(cidr)
+		} else if record[1] != "1814991" && record[2] == "1814991" {
+			lat := record[7]
+			lng := record[8]
+			if chinaboundary.IsCN(lat, lng) {
+				cidr := record[0]
+				mmdbInsert(cidr)
+			}
 		}
 	}
 }
+
 func main() {
 	writer, _ = mmdbwriter.New(
 		mmdbwriter.Options{
@@ -111,7 +130,7 @@ func main() {
 		})
 	importLocal()
 	importCSV("/tmp/data/GeoLite2-City-Blocks-IPv6.csv")
-	//importCSV("/tmp/data/GeoLite2-Country-Blocks-IPv4.csv")
+	importCSV("/tmp/data/GeoLite2-Country-Blocks-IPv4.csv")
 	importTXT("/tmp/data/china6.txt")
 	importTXT("/tmp/data/china_ip_list.txt")
 	fh, err := os.Create("/tmp/Country-only-cn-private.mmdb")
