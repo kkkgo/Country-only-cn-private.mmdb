@@ -1,6 +1,8 @@
 FROM alpine:edge AS builder
 RUN apk upgrade&&apk add --no-cache go git
 COPY mmdb.go /tmp/mmdb/
+COPY 100000_full.json /tmp/mmdb/
+COPY chinaboundary/chinaboundary.go /tmp/mmdb/chinaboundary/
 WORKDIR /tmp/mmdb
 RUN go mod init mmdb && go get -u && go build && mkdir -p /mmdb && mv mmdb /mmdb/
 RUN git clone https://github.com/maxmind/mmdbverify.git --depth 1 /tmp/mmdbverify/
