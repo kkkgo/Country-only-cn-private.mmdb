@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"mmdb/chinaboundary"
@@ -110,9 +111,11 @@ func importCSV(filename string) {
 			cidr := record[0]
 			mmdbInsert(cidr)
 		} else if record[1] != "1814991" && record[2] == "1814991" {
-			lat := record[7]
-			lng := record[8]
-			if chinaboundary.IsCN(lat, lng) {
+
+			lat, errLat := strconv.ParseFloat(record[7], 64)
+			lng, errLng := strconv.ParseFloat(record[8], 64)
+
+			if errLat == nil && errLng == nil && chinaboundary.IsCN(lat, lng) {
 				cidr := record[0]
 				mmdbInsert(cidr)
 			}
