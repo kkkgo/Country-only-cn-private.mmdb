@@ -14,7 +14,7 @@ RUN apk upgrade&&apk add --no-cache curl unzip git xz bind-tools
 COPY build.sh /usr/bin/
 COPY test.yaml /usr/bin/
 COPY --from=builder /mmdb/* /usr/bin/
-COPY --from=sliamb/prebuild-paopaodns /src/mosdns /usr/bin/
+COPY --from=sliamb/paopaodns /usr/sbin/mosdns /usr/bin/
 RUN chmod +x /usr/bin/*
 WORKDIR /data
 ENTRYPOINT [ "build.sh" ]
