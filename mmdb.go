@@ -14,9 +14,13 @@ import (
 
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
+	"github.com/v2fly/v2ray-core/v5/app/router/routercommon"
+	"google.golang.org/protobuf/proto"
 )
 
 var writer *mmdbwriter.Tree
+var cnCIDRs []*routercommon.CIDR
+var privateCIDRs []*routercommon.CIDR
 var CN = mmdbtype.Map{
 	"country": mmdbtype.Map{"iso_code": mmdbtype.String("CN")},
 }
@@ -25,20 +29,41 @@ var PRIVATE = mmdbtype.Map{
 }
 
 func mmdbLocal(cidr string) {
-	_, IP, _ := net.ParseCIDR(cidr)
-	writer.Insert(IP, PRIVATE)
+	_, IPNet, _ := net.ParseCIDR(cidr)
+	writer.Insert(IPNet, PRIVATE)
+
+	ip := IPNet.IP
+	if ip4 := ip.To4(); ip4 != nil {
+		ip = ip4
+	}
+	prefix, _ := IPNet.Mask.Size()
+	privateCIDRs = append(privateCIDRs, &routercommon.CIDR{
+		Ip:     ip,
+		Prefix: uint32(prefix),
+	})
 }
 
 func mmdbInsert(cidr string) bool {
-	_, IP, err := net.ParseCIDR(cidr)
+	_, IPNet, err := net.ParseCIDR(cidr)
 	if err != nil {
 		log.Fatal(err)
 		return false
 	}
-	if err := writer.Insert(IP, CN); err != nil {
+	if err := writer.Insert(IPNet, CN); err != nil {
 		log.Fatal(err)
 		return false
 	}
+
+	ip := IPNet.IP
+	if ip4 := ip.To4(); ip4 != nil {
+		ip = ip4
+	}
+	prefix, _ := IPNet.Mask.Size()
+	cnCIDRs = append(cnCIDRs, &routercommon.CIDR{
+		Ip:     ip,
+		Prefix: uint32(prefix),
+	})
+
 	return true
 }
 
@@ -59,7 +84,7 @@ func importLocal() {
 	mmdbLocal("224.0.0.0/4")
 	mmdbLocal("240.0.0.0/4")
 	mmdbLocal("255.255.255.255/32")
-	mmdbLocal("221.228.32.13/32") //jsfz
+	mmdbLocal("221.228.32.13/32")  //jsfz
 	mmdbLocal("183.192.65.101/32") //shfz
 	mmdbLocal("::1/128")
 	mmdbLocal("fc00::/7")
@@ -143,6 +168,25 @@ func main() {
 	}
 	_, err = writer.WriteTo(fh)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	cnGeoIP := &routercommon.GeoIP{
+		CountryCode: "cn",
+		Cidr:        cnCIDRs,
+	}
+	privateGeoIP := &routercommon.GeoIP{
+		CountryCode: "private",
+		Cidr:        privateCIDRs,
+	}
+	geoIPList := &routercommon.GeoIPList{
+		Entry: []*routercommon.GeoIP{cnGeoIP, privateGeoIP},
+	}
+	datBytes, err := proto.Marshal(geoIPList)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile("/tmp/CN-local.dat", datBytes, 0644); err != nil {
 		log.Fatal(err)
 	}
 }
