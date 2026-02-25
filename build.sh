@@ -7,39 +7,39 @@ IPREX4='([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[
 IPREX6="(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
 
 v4check() {
-    if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX4"; then
-        echo "$1" pass.
-    else
-        echo "$1" failed.
-        cp dns_check_failed /
-        exit
-    fi
+	if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX4"; then
+		echo "$1" pass.
+	else
+		echo "$1" failed.
+		cp dns_check_failed /
+		exit
+	fi
 }
 v4checkb() {
-    if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep "NXDOMAIN"; then
-        echo "$1" pass.
-    else
-        echo "$1" failed.
-        cp dns_check_failed /
-        exit
-    fi
+	if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep "NXDOMAIN"; then
+		echo "$1" pass.
+	else
+		echo "$1" failed.
+		cp dns_check_failed /
+		exit
+	fi
 }
 v6check() {
-    if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX6"; then
-        echo "$1" pass.
-    else
-        echo "$1" failed.
-        cp dns_check_failed /
-        exit
-    fi
+	if echo "$1" | grep -v "timed out" | grep -v "127.0.0.1" | grep -E "$IPREX6"; then
+		echo "$1" pass.
+	else
+		echo "$1" failed.
+		cp dns_check_failed /
+		exit
+	fi
 }
 
 curl -L -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip' -o /tmp/GeoLite2-Country-CSV.zip
 mmdb_hash=$(sha256sum /tmp/GeoLite2-Country-CSV.zip | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 mmdb_down_hash=$(curl -sL -u "$YOUR_ACCOUNT_ID":"$YOUR_LICENSE_KEY" 'https://download.maxmind.com/geoip/databases/GeoLite2-City-CSV/download?suffix=zip.sha256' | grep -Eo "[a-zA-Z0-9]{64}" | head -1)
 if [ "$mmdb_down_hash" != "$mmdb_hash" ]; then
-    cp /mmdb_down_hash_error .
-    exit
+	cp /mmdb_down_hash_error .
+	exit
 fi
 
 cd /tmp || exit
@@ -48,31 +48,31 @@ rm GeoLite2-Country-CSV.zip
 mv GeoLite2*/*.csv /tmp/data/
 
 git clone --branch ip-lists --depth 1 https://github.com/gaoyifan/china-operator-ip.git /tmp/china-operator-ip
-if [ -f /tmp/china-operator-ip/china6.txt ];then
-    cp /tmp/china-operator-ip/china6.txt /tmp/data/china6.txt
+if [ -f /tmp/china-operator-ip/china6.txt ]; then
+	cp /tmp/china-operator-ip/china6.txt /tmp/data/china6.txt
 else
-    echo "china6 download failed."
-    cp /china6_download_failed /
-    exit
+	echo "china6 download failed."
+	cp /china6_download_failed /
+	exit
 fi
 
 mmdb
 
 if mmdbverify -file /tmp/Country-only-cn-private.mmdb; then
-    echo "mmdbverify pass."
+	echo "mmdbverify pass."
 else
-    echo "mmdbverify failed"
-    cp /mmdbverify /
-    exit
+	echo "mmdbverify failed"
+	cp /mmdbverify /
+	exit
 fi
 mmdb_size=$(wc -c <"/tmp/Country-only-cn-private.mmdb")
 
 if [ "$mmdb_size" -gt 190000 ]; then
-    echo "mmdb_size pass."
+	echo "mmdb_size pass."
 else
-    echo "mmdb_size failed:""$mmdb_size"
-    cp /mmdb_size /
-    exit
+	echo "mmdb_size failed:""$mmdb_size"
+	cp /mmdb_size /
+	exit
 fi
 
 mosdns start -d /usr/bin -c test.yaml &
@@ -123,27 +123,45 @@ aaaatb=$(dig aaaabad.dns @127.0.0.1 -p53 AAAA)
 v4checkb "$aaaatb"
 echo "DNS TEST PASS !"
 if [ -f /tmp/Country-only-cn-private.mmdb ]; then
-    md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
-    mmdb_sha256=$(sha256sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1)
-    echo "$mmdb_sha256" >/data/Country-only-cn-private.mmdb.sha256sum
-    echo Gen md5sum:
-    cat /data/Country-only-cn-private.mmdb.md5sum
-    echo Gen sha256sum:
-    cat /data/Country-only-cn-private.mmdb.sha256sum
-    cp /tmp/Country-only-cn-private.mmdb /data/Country-only-cn-private.mmdb
-    mmdb_cp_sha256=$(sha256sum /data/Country-only-cn-private.mmdb | cut -d" " -f1)
-    if mmdbverify -file /data/Country-only-cn-private.mmdb && [ "$mmdb_sha256" = "$mmdb_cp_sha256" ]; then
-        echo "Copy mmdbverify pass."
-    else
-        echo "Copy mmdbverify failed"
-        cp /cp_mmdbverify /
-        exit
-    fi
-    mkdir -p /tmp/xz
-    cp /tmp/Country-only-cn-private.mmdb /tmp/xz/
-    cd /tmp/xz || exit
-    xz -9 -k -e /tmp/xz/Country-only-cn-private.mmdb
-    sha256sum /tmp/xz/Country-only-cn-private.mmdb.xz | cut -d" " -f1 >/tmp/xz/Country-only-cn-private.mmdb.xz.sha256sum
-    mv /tmp/xz/Country-only-cn-private.mmdb.xz /data/Country-only-cn-private.mmdb.xz
-    mv /tmp/xz/Country-only-cn-private.mmdb.xz.sha256sum /data/Country-only-cn-private.mmdb.xz.sha256sum
+	md5sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1 >/data/Country-only-cn-private.mmdb.md5sum
+	mmdb_sha256=$(sha256sum /tmp/Country-only-cn-private.mmdb | cut -d" " -f1)
+	echo "$mmdb_sha256" >/data/Country-only-cn-private.mmdb.sha256sum
+	echo Gen md5sum:
+	cat /data/Country-only-cn-private.mmdb.md5sum
+	echo Gen sha256sum:
+	cat /data/Country-only-cn-private.mmdb.sha256sum
+	cp /tmp/Country-only-cn-private.mmdb /data/Country-only-cn-private.mmdb
+	mmdb_cp_sha256=$(sha256sum /data/Country-only-cn-private.mmdb | cut -d" " -f1)
+	if mmdbverify -file /data/Country-only-cn-private.mmdb && [ "$mmdb_sha256" = "$mmdb_cp_sha256" ]; then
+		echo "Copy mmdbverify pass."
+	else
+		echo "Copy mmdbverify failed"
+		cp /cp_mmdbverify /
+		exit
+	fi
+	mkdir -p /tmp/xz
+	cp /tmp/Country-only-cn-private.mmdb /tmp/xz/
+	cd /tmp/xz || exit
+	xz -9 -k -e /tmp/xz/Country-only-cn-private.mmdb
+	sha256sum /tmp/xz/Country-only-cn-private.mmdb.xz | cut -d" " -f1 >/tmp/xz/Country-only-cn-private.mmdb.xz.sha256sum
+	mv /tmp/xz/Country-only-cn-private.mmdb.xz /data/Country-only-cn-private.mmdb.xz
+	mv /tmp/xz/Country-only-cn-private.mmdb.xz.sha256sum /data/Country-only-cn-private.mmdb.xz.sha256sum
+
+	if [ -f /tmp/CN-local.dat ]; then
+		md5sum /tmp/CN-local.dat | cut -d" " -f1 >/data/CN-local.dat.md5sum
+		dat_sha256=$(sha256sum /tmp/CN-local.dat | cut -d" " -f1)
+		echo "$dat_sha256" >/data/CN-local.dat.sha256sum
+		echo Gen dat md5sum:
+		cat /data/CN-local.dat.md5sum
+		echo Gen dat sha256sum:
+		cat /data/CN-local.dat.sha256sum
+		cp /tmp/CN-local.dat /data/CN-local.dat
+
+		cp /tmp/CN-local.dat /tmp/xz/
+		cd /tmp/xz || exit
+		xz -9 -k -e /tmp/xz/CN-local.dat
+		sha256sum /tmp/xz/CN-local.dat.xz | cut -d" " -f1 >/tmp/xz/CN-local.dat.xz.sha256sum
+		mv /tmp/xz/CN-local.dat.xz /data/CN-local.dat.xz
+		mv /tmp/xz/CN-local.dat.xz.sha256sum /data/CN-local.dat.xz.sha256sum
+	fi
 fi

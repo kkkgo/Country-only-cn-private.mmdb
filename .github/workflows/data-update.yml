@@ -24,4 +24,7 @@ jobs:
       run: |
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb.md5sum &&
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb.sha256sum &&
-          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/CN-local.dat.md5sum &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/CN-local.dat.sha256sum &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/CN-local.dat
