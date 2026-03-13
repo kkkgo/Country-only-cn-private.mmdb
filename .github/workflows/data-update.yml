@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
     - name: Update data
       run: docker run -v $(pwd):/data -e YOUR_ACCOUNT_ID=${{ secrets.YOUR_ACCOUNT_ID }} -e YOUR_LICENSE_KEY=${{ secrets.YOUR_LICENSE_KEY }} sliamb/mmdb
-    - uses: EndBug/add-and-commit@v9
+    - uses: EndBug/add-and-commit@main
       with:
         author_name: Github Actions
         author_email: actions@github.com
