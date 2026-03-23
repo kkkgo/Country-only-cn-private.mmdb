@@ -24,6 +24,10 @@ jobs:
       with:
         size_threshold: 10M
         filenames: '*.mmdb,*.xz,*.dat,*.md5sum,*.sha256sum'
+    - uses: kkkgo/Clean-Git-File-History-Action@main
+      with:
+        size_threshold: 10M
+        filenames: 'geoip*'
     - name: Flash CDN
       run: |
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb.md5sum &&
