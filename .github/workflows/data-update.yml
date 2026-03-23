@@ -17,7 +17,6 @@ jobs:
       run: docker run -v $(pwd):/data -e YOUR_ACCOUNT_ID=${{ secrets.YOUR_ACCOUNT_ID }} -e YOUR_LICENSE_KEY=${{ secrets.YOUR_LICENSE_KEY }} sliamb/mmdb
     - uses: EndBug/add-and-commit@main
       with:
-        add: '["*.mmdb", "*.xz", "*.dat", "*.md5sum", "*.sha256sum"]'
         author_name: Github Actions
         author_email: actions@github.com
         committer_email: actions@github.com
@@ -25,10 +24,6 @@ jobs:
       with:
         size_threshold: 10M
         filenames: '*.mmdb,*.xz,*.dat,*.md5sum,*.sha256sum'
-    - uses: kkkgo/Clean-Git-File-History-Action@main
-      with:
-        size_threshold: 10M
-        filenames: 'geoip*'
     - name: Flash CDN
       run: |
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/Country-only-cn-private.mmdb.md5sum &&
