@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"encoding/csv"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -209,14 +212,78 @@ func importCloudflare() {
 	}
 }
 
+
+func checkGeosite(filename string, mandatoryTags []string) error {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	var list routercommon.GeoSiteList
+	if err := proto.Unmarshal(data, &list); err != nil {
+		return err
+	}
+
+	foundTags := make(map[string]bool)
+	for _, tag := range mandatoryTags {
+		tr := strings.TrimSpace(tag)
+		if tr != "" {
+			foundTags[strings.ToUpper(tr)] = false
+		}
+	}
+
+	for _, site := range list.Entry {
+		siteCode := strings.ToUpper(site.CountryCode)
+		if _, ok := foundTags[siteCode]; ok {
+			foundTags[siteCode] = true
+		}
+
+		for _, domain := range site.Domain {
+			if domain.Type == routercommon.Domain_Regex {
+				_, err := regexp.Compile(domain.Value)
+				if err != nil {
+					return fmt.Errorf("invalid regex in [%s]: %s - %v", site.CountryCode, domain.Value, err)
+				}
+			}
+		}
+	}
+
+	for tag, found := range foundTags {
+		if !found {
+			return fmt.Errorf("geosite:%s not found", tag)
+		}
+	}
+
+	return nil
+}
+
 func main() {
-	writer, _ = mmdbwriter.New(
+	checkPath := flag.String("check-geosite", "", "check geosite.dat file")
+	checkTags := flag.String("check-tags", "TRACKER,CATEGORY-PUBLIC-TRACKER", "comma separated list of mandatory tags to check")
+	flag.Parse()
+
+	if *checkPath != "" {
+		var tags []string
+		if *checkTags != "" {
+			tags = strings.Split(*checkTags, ",")
+		}
+		if err := checkGeosite(*checkPath, tags); err != nil {
+			log.Fatalf("geosite check failed: %v", err)
+		}
+		fmt.Printf("geosite check passed: %s\n", *checkPath)
+		return
+	}
+
+	var err error
+	writer, err = mmdbwriter.New(
 		mmdbwriter.Options{
 			IncludeReservedNetworks: true,
 			DatabaseType:            "GeoLite2-Country",
 			RecordSize:              24,
 			Description:             map[string]string{"en": "GeoLite2 Country database"},
 		})
+	if err != nil {
+		log.Fatal(err)
+	}
 	importCSV("/tmp/data/GeoLite2-City-Blocks-IPv6.csv")
 	importCSV("/tmp/data/GeoLite2-City-Blocks-IPv4.csv")
 	importTXT("/tmp/data/china6.txt")
@@ -229,6 +296,10 @@ func main() {
 	}
 	_, err = writer.WriteTo(fh)
 	if err != nil {
+		fh.Close()
+		log.Fatal(err)
+	}
+	if err := fh.Close(); err != nil {
 		log.Fatal(err)
 	}
 

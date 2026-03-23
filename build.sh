@@ -56,6 +56,23 @@ else
 	exit
 fi
 
+git clone --branch release --depth 1 https://github.com/MetaCubeX/meta-rules-dat.git /tmp/geosite
+if [ -f /tmp/geosite/geosite.dat ]; then
+	cp /tmp/geosite/geosite.dat.sha256sum /tmp/
+	cd /tmp || exit
+	if sha256sum -c geosite.dat.sha256sum; then
+		mmdb -check-geosite /tmp/geosite/geosite.dat
+		cp /tmp/geosite/geosite.dat /data/geosite.dat
+		cp /tmp/geosite/geosite.dat.sha256sum /data/geosite.dat.sha256sum
+	else
+		echo "geosite.dat sha256sum check failed."
+		exit 1
+	fi
+else
+	echo "geosite download failed."
+	exit 1
+fi
+
 mmdb
 
 if mmdbverify -file /tmp/Country-only-cn-private.mmdb; then
