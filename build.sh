@@ -58,8 +58,7 @@ fi
 
 git clone --branch release --depth 1 https://github.com/MetaCubeX/meta-rules-dat.git /tmp/geosite
 if [ -f /tmp/geosite/geosite.dat ]; then
-	cp /tmp/geosite/geosite.dat.sha256sum /tmp/
-	cd /tmp || exit
+	cd /tmp/geosite || exit
 	if sha256sum -c geosite.dat.sha256sum; then
 		mmdb -check-geosite /tmp/geosite/geosite.dat
 		cp /tmp/geosite/geosite.dat /data/geosite.dat
