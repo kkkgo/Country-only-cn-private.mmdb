@@ -33,4 +33,6 @@ jobs:
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/CN-local.dat.sha256sum &&
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/CN-local.dat &&
           curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/geosite.dat &&
-          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/geosite.dat.sha256sum
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/geosite.dat.sha256sum &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/geosite.dat.xz &&
+          curl -i https://purge.jsdelivr.net/gh/${{ github.repository }}/geosite.dat.xz.sha256sum

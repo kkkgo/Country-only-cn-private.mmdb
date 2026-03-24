@@ -63,6 +63,14 @@ if [ -f /tmp/geosite/geosite.dat ]; then
 		mmdb -check-geosite /tmp/geosite/geosite.dat
 		cp /tmp/geosite/geosite.dat /data/geosite.dat
 		cp /tmp/geosite/geosite.dat.sha256sum /data/geosite.dat.sha256sum
+
+		mkdir -p /tmp/xz
+		cp /tmp/geosite/geosite.dat /tmp/xz/
+		cd /tmp/xz || exit
+		xz -9 -k -e /tmp/xz/geosite.dat
+		sha256sum /tmp/xz/geosite.dat.xz | cut -d" " -f1 >/tmp/xz/geosite.dat.xz.sha256sum
+		mv /tmp/xz/geosite.dat.xz /data/geosite.dat.xz
+		mv /tmp/xz/geosite.dat.xz.sha256sum /data/geosite.dat.xz.sha256sum
 	else
 		echo "geosite.dat sha256sum check failed."
 		exit 1
