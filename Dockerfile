@@ -10,11 +10,9 @@ WORKDIR /tmp/mmdbverify
 RUN rm *.mod *.sum && go mod init mmdbverify && go get -u && go build && mv mmdbverify /mmdb/
 
 FROM alpine:edge
-RUN apk upgrade&&apk add --no-cache curl unzip git xz bind-tools
+RUN apk upgrade&&apk add --no-cache curl unzip git xz
 COPY build.sh /usr/bin/
-COPY test.yaml /usr/bin/
 COPY --from=builder /mmdb/* /usr/bin/
-COPY --from=sliamb/paopaodns /usr/sbin/mosdns /usr/bin/
 RUN chmod +x /usr/bin/*
 WORKDIR /data
 ENTRYPOINT [ "build.sh" ]

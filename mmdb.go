@@ -19,6 +19,7 @@ import (
 
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
+	"github.com/oschwald/maxminddb-golang"
 	"github.com/v2fly/v2ray-core/v5/app/router/routercommon"
 	"google.golang.org/protobuf/proto"
 )
@@ -35,6 +36,165 @@ var PRIVATE = mmdbtype.Map{
 }
 var CLOUDFLARE = mmdbtype.Map{
 	"country": mmdbtype.Map{"iso_code": mmdbtype.String("CLOUDFLARE")},
+}
+
+type testCase struct {
+	IP       string
+	Expected string // "CN", "PRIVATE", "CLOUDFLARE", or "" for none
+}
+
+var testIPs = []testCase{
+	// CN IPv4
+	{"114.114.114.114", "CN"},
+	{"119.29.29.29", "CN"},
+	{"223.5.5.5", "CN"},
+	{"180.76.76.76", "CN"},
+	{"101.226.4.6", "CN"},
+	{"218.30.118.6", "CN"},
+	{"123.125.81.6", "CN"},
+	{"140.207.198.6", "CN"},
+	{"1.2.4.8", "CN"},
+	{"117.50.10.10", "CN"},
+	{"52.80.52.52", "CN"},
+	// CN IPv6
+	{"2400:3200:baba::1", "CN"},
+	{"2402:4e00::1", "CN"},
+	{"2400:da00::6666", "CN"},
+	{"240e:4c:4008::1", "CN"},
+	{"2408:8899::8", "CN"},
+	{"2409:8088::a", "CN"},
+	{"240C::6666", "CN"},
+	{"2001:dc7:1000::1", "CN"},
+	{"2001:da8:8000:1:202:120:2:100", "CN"},
+	{"2001:cc0:2fff:1::6666", "CN"},
+	{"2001:da8:208:10::6", "CN"},
+	// PRIVATE
+	{"221.228.32.13", "PRIVATE"},
+	{"183.192.65.101", "PRIVATE"},
+	// CLOUDFLARE IPv4
+	{"104.21.21.239", "CLOUDFLARE"},
+	{"172.67.201.108", "CLOUDFLARE"},
+	// CLOUDFLARE IPv6
+	{"2606:4700:3037::ac43:c96c", "CLOUDFLARE"},
+	{"2606:4700:3034::6815:15ef", "CLOUDFLARE"},
+	// Non-matching
+	{"8.8.8.8", ""},
+	{"2a09:bac1:19f0::1", ""},
+}
+
+func checkMMDB(filename string) error {
+	db, err := maxminddb.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open mmdb: %v", err)
+	}
+	defer db.Close()
+
+	var record struct {
+		Country struct {
+			ISOCode string `maxminddb:"iso_code"`
+		} `maxminddb:"country"`
+	}
+
+	failed := 0
+	for _, tc := range testIPs {
+		ip := net.ParseIP(tc.IP)
+		if ip == nil {
+			return fmt.Errorf("invalid test IP: %s", tc.IP)
+		}
+		err := db.Lookup(ip, &record)
+		if err != nil {
+			return fmt.Errorf("lookup %s failed: %v", tc.IP, err)
+		}
+		got := record.Country.ISOCode
+		if got != tc.Expected {
+			fmt.Printf("FAIL: %s expected %q, got %q\n", tc.IP, tc.Expected, got)
+			failed++
+		} else if tc.Expected != "" {
+			fmt.Printf("PASS: %s -> %s\n", tc.IP, got)
+		} else {
+			fmt.Printf("PASS: %s -> %q (no match)\n", tc.IP, got)
+		}
+		record.Country.ISOCode = ""
+	}
+	if failed > 0 {
+		return fmt.Errorf("%d test(s) failed", failed)
+	}
+	return nil
+}
+
+func buildNets(entry *routercommon.GeoIP) []*net.IPNet {
+	var nets []*net.IPNet
+	for _, cidr := range entry.Cidr {
+		bits := 32
+		if len(cidr.Ip) != 4 {
+			bits = 128
+		}
+		nets = append(nets, &net.IPNet{
+			IP:   cidr.Ip,
+			Mask: net.CIDRMask(int(cidr.Prefix), bits),
+		})
+	}
+	return nets
+}
+
+func checkDat(filename string) error {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("failed to read dat file: %v", err)
+	}
+	var geoIPList routercommon.GeoIPList
+	if err := proto.Unmarshal(data, &geoIPList); err != nil {
+		return fmt.Errorf("failed to unmarshal dat: %v", err)
+	}
+
+	// Build lookup table: country code -> nets
+	codeNets := make(map[string][]*net.IPNet)
+	for _, entry := range geoIPList.Entry {
+		code := strings.ToUpper(entry.CountryCode)
+		codeNets[code] = buildNets(entry)
+	}
+
+	// Verify expected entries exist
+	for _, code := range []string{"CN", "PRIVATE", "CLOUDFLARE"} {
+		if _, ok := codeNets[code]; !ok {
+			return fmt.Errorf("no %q entry found in dat file", code)
+		}
+	}
+
+	failed := 0
+	for _, tc := range testIPs {
+		ip := net.ParseIP(tc.IP)
+		if ip == nil {
+			return fmt.Errorf("invalid test IP: %s", tc.IP)
+		}
+		// Find the most specific (longest prefix) match
+		got := ""
+		bestPrefix := -1
+		for code, nets := range codeNets {
+			for _, ipNet := range nets {
+				if ipNet.Contains(ip) {
+					ones, _ := ipNet.Mask.Size()
+					if ones > bestPrefix {
+						bestPrefix = ones
+						got = code
+					}
+				}
+			}
+		}
+		expected := strings.ToUpper(tc.Expected)
+		if got != expected {
+			fmt.Printf("FAIL: %s expected %q, got %q\n", tc.IP, expected, got)
+			failed++
+		} else if expected != "" {
+			fmt.Printf("PASS: %s -> %s\n", tc.IP, got)
+		} else {
+			fmt.Printf("PASS: %s -> %q (no match)\n", tc.IP, got)
+		}
+	}
+	if failed > 0 {
+		return fmt.Errorf("%d test(s) failed", failed)
+	}
+	return nil
 }
 
 func mmdbLocal(cidr string) {
@@ -259,6 +419,8 @@ func checkGeosite(filename string, mandatoryTags []string) error {
 func main() {
 	checkPath := flag.String("check-geosite", "", "check geosite.dat file")
 	checkTags := flag.String("check-tags", "TRACKER,CATEGORY-PUBLIC-TRACKER", "comma separated list of mandatory tags to check")
+	checkMMDBPath := flag.String("check-mmdb", "", "check mmdb file with test IPs")
+	checkDatPath := flag.String("check-dat", "", "check dat file with test IPs")
 	flag.Parse()
 
 	if *checkPath != "" {
@@ -270,6 +432,22 @@ func main() {
 			log.Fatalf("geosite check failed: %v", err)
 		}
 		fmt.Printf("geosite check passed: %s\n", *checkPath)
+		return
+	}
+
+	if *checkMMDBPath != "" {
+		if err := checkMMDB(*checkMMDBPath); err != nil {
+			log.Fatalf("mmdb check failed: %v", err)
+		}
+		fmt.Printf("mmdb check passed: %s\n", *checkMMDBPath)
+		return
+	}
+
+	if *checkDatPath != "" {
+		if err := checkDat(*checkDatPath); err != nil {
+			log.Fatalf("dat check failed: %v", err)
+		}
+		fmt.Printf("dat check passed: %s\n", *checkDatPath)
 		return
 	}
 
