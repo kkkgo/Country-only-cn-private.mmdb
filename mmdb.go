@@ -373,6 +373,103 @@ func importCloudflare() {
 }
 
 
+func parseGlobalMark(filename string) (global, cnRule, cnMarked []string, err error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(line, "##@@domain:"):
+			domain := strings.TrimPrefix(line, "##@@")
+			cnMarked = append(cnMarked, domain)
+		case strings.HasPrefix(line, "#@domain:"):
+			domain := strings.TrimPrefix(line, "#@")
+			cnRule = append(cnRule, domain)
+		case strings.HasPrefix(line, "domain:"):
+			global = append(global, line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, nil, nil, err
+	}
+	return global, cnRule, cnMarked, nil
+}
+
+func domainsToGeoSite(tag string, domainLines []string) *routercommon.GeoSite {
+	var domains []*routercommon.Domain
+	for _, line := range domainLines {
+		value := strings.TrimPrefix(line, "domain:")
+		if value == "" {
+			continue
+		}
+		domains = append(domains, &routercommon.Domain{
+			Type:  routercommon.Domain_RootDomain,
+			Value: value,
+		})
+	}
+	return &routercommon.GeoSite{
+		CountryCode: strings.ToUpper(tag),
+		Domain:      domains,
+	}
+}
+
+func injectGlobalMark(geositePath, globalMarkPath string) error {
+	global, cnRule, cnMarked, err := parseGlobalMark(globalMarkPath)
+	if err != nil {
+		return fmt.Errorf("parse global_mark: %v", err)
+	}
+	if len(global) == 0 && len(cnRule) == 0 && len(cnMarked) == 0 {
+		return fmt.Errorf("global_mark file is empty or contains no recognized entries")
+	}
+	fmt.Printf("Parsed global_mark: global=%d, cn_rule=%d, cn_marked=%d\n",
+		len(global), len(cnRule), len(cnMarked))
+
+	data, err := os.ReadFile(geositePath)
+	if err != nil {
+		return fmt.Errorf("read geosite.dat: %v", err)
+	}
+	var list routercommon.GeoSiteList
+	if err := proto.Unmarshal(data, &list); err != nil {
+		return fmt.Errorf("unmarshal geosite.dat: %v", err)
+	}
+
+	paoTags := map[string]bool{
+		"PAOPAODNS_GLOBAL_MARK": true,
+		"PAOPAODNS_CN_MARK":     true,
+		"PAOPAODNS_SKIP_MARK":   true,
+	}
+	var filtered []*routercommon.GeoSite
+	for _, entry := range list.Entry {
+		if !paoTags[strings.ToUpper(entry.CountryCode)] {
+			filtered = append(filtered, entry)
+		}
+	}
+	list.Entry = filtered
+
+	list.Entry = append(list.Entry,
+		domainsToGeoSite("PAOPAODNS_GLOBAL_MARK", global),
+		domainsToGeoSite("PAOPAODNS_CN_MARK", cnRule),
+		domainsToGeoSite("PAOPAODNS_SKIP_MARK", cnMarked),
+	)
+
+	outData, err := proto.Marshal(&list)
+	if err != nil {
+		return fmt.Errorf("marshal geosite.dat: %v", err)
+	}
+	if err := os.WriteFile(geositePath, outData, 0644); err != nil {
+		return fmt.Errorf("write geosite.dat: %v", err)
+	}
+	return nil
+}
+
 func checkGeosite(filename string, mandatoryTags []string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -421,6 +518,8 @@ func main() {
 	checkTags := flag.String("check-tags", "TRACKER,CATEGORY-PUBLIC-TRACKER", "comma separated list of mandatory tags to check")
 	checkMMDBPath := flag.String("check-mmdb", "", "check mmdb file with test IPs")
 	checkDatPath := flag.String("check-dat", "", "check dat file with test IPs")
+	injectGeositePath := flag.String("inject-geosite", "", "path to geosite.dat to inject new tags into")
+	globalMarkPath := flag.String("global-mark", "", "path to decompressed global_mark text file")
 	flag.Parse()
 
 	if *checkPath != "" {
@@ -432,6 +531,17 @@ func main() {
 			log.Fatalf("geosite check failed: %v", err)
 		}
 		fmt.Printf("geosite check passed: %s\n", *checkPath)
+		return
+	}
+
+	if *injectGeositePath != "" {
+		if *globalMarkPath == "" {
+			log.Fatal("-global-mark is required with -inject-geosite")
+		}
+		if err := injectGlobalMark(*injectGeositePath, *globalMarkPath); err != nil {
+			log.Fatalf("inject global mark failed: %v", err)
+		}
+		fmt.Printf("global_mark tags injected into: %s\n", *injectGeositePath)
 		return
 	}
 

@@ -78,8 +78,36 @@ if [ ! -f /tmp/geosite/geosite.dat ]; then
 fi
 (cd /tmp/geosite && sha256sum -c geosite.dat.sha256sum)
 mmdb -check-geosite /tmp/geosite/geosite.dat
+
+# Download and extract global_mark.dat
+retry git clone --depth 1 https://github.com/kkkgo/PaoPao-Pref.git /tmp/paopao-pref
+if [ ! -f /tmp/paopao-pref/global_mark.dat ]; then
+	echo "global_mark.dat not found after clone"
+	exit 1
+fi
+(cd /tmp/paopao-pref && sha256sum -c global_mark.dat.sha256sum)
+
+file_size=$(wc -c < /tmp/paopao-pref/global_mark.dat)
+xz_size=$((file_size - 1024))
+
+embedded_sha512=$(tail -c 1024 /tmp/paopao-pref/global_mark.dat | head -c 128 | tr -d '\0')
+actual_sha512=$(head -c "$xz_size" /tmp/paopao-pref/global_mark.dat | sha512sum | cut -d" " -f1)
+if [ "$actual_sha512" != "$embedded_sha512" ]; then
+	echo "global_mark.dat SHA512 internal checksum mismatch"
+	exit 1
+fi
+echo "global_mark.dat SHA512 internal checksum passed"
+
+head -c "$xz_size" /tmp/paopao-pref/global_mark.dat > /tmp/global_mark.xz
+xz -d /tmp/global_mark.xz
+
+# Inject PaoPaoDNS tags into geosite.dat
+mmdb -inject-geosite /tmp/geosite/geosite.dat -global-mark /tmp/global_mark
+mmdb -check-geosite /tmp/geosite/geosite.dat -check-tags "TRACKER,CATEGORY-PUBLIC-TRACKER,PAOPAODNS_GLOBAL_MARK,PAOPAODNS_CN_MARK,PAOPAODNS_SKIP_MARK"
+
+# Re-compute checksums after injection
+sha256sum /tmp/geosite/geosite.dat | cut -d" " -f1 >/data/geosite.dat.sha256sum
 cp /tmp/geosite/geosite.dat /data/geosite.dat
-cp /tmp/geosite/geosite.dat.sha256sum /data/geosite.dat.sha256sum
 xz -9 -k -e -f /tmp/geosite/geosite.dat
 sha256sum /tmp/geosite/geosite.dat.xz | cut -d" " -f1 >/data/geosite.dat.xz.sha256sum
 mv /tmp/geosite/geosite.dat.xz /data/geosite.dat.xz
