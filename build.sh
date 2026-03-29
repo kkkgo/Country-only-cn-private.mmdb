@@ -85,7 +85,13 @@ if [ ! -f /tmp/paopao-pref/global_mark.dat ]; then
 	echo "global_mark.dat not found after clone"
 	exit 1
 fi
-(cd /tmp/paopao-pref && sha256sum -c global_mark.dat.sha256sum)
+expected_sha256=$(cat /tmp/paopao-pref/global_mark.dat.sha256sum | tr -d '[:space:]')
+actual_sha256=$(sha256sum /tmp/paopao-pref/global_mark.dat | cut -d" " -f1)
+if [ "$actual_sha256" != "$expected_sha256" ]; then
+	echo "global_mark.dat SHA256 mismatch: expected=$expected_sha256 got=$actual_sha256"
+	exit 1
+fi
+echo "global_mark.dat SHA256 checksum passed"
 
 file_size=$(wc -c < /tmp/paopao-pref/global_mark.dat)
 xz_size=$((file_size - 1024))
