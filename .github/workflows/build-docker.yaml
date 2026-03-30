@@ -26,6 +26,8 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@main
+        with:
+          registry-type: public
       - name: Build and push
         uses: docker/build-push-action@master
         with:
