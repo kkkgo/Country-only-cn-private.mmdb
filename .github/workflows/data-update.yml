@@ -13,8 +13,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@main
+    - name: "Configure AWS Credentials"
+      uses: aws-actions/configure-aws-credentials@main
+      with:
+        aws-region: us-east-1
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@main
     - name: Update data
-      run: docker run -v $(pwd):/data -e YOUR_ACCOUNT_ID=${{ secrets.YOUR_ACCOUNT_ID }} -e YOUR_LICENSE_KEY=${{ secrets.YOUR_LICENSE_KEY }} sliamb/mmdb
+      run: docker run -v $(pwd):/data -e YOUR_ACCOUNT_ID=${{ secrets.YOUR_ACCOUNT_ID }} -e YOUR_LICENSE_KEY=${{ secrets.YOUR_LICENSE_KEY }} ${{ secrets.AWS_MMDB_RUNNER }}
     - uses: EndBug/add-and-commit@main
       with:
         author_name: Github Actions
