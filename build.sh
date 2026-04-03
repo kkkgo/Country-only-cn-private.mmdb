@@ -77,7 +77,24 @@ if [ ! -f /tmp/geosite/geosite.dat ]; then
 	exit 1
 fi
 (cd /tmp/geosite && sha256sum -c geosite.dat.sha256sum)
-mmdb -check-geosite /tmp/geosite/geosite.dat
+mmdb -check-geosite /tmp/geosite/geosite.dat -check-tags "TRACKER,CATEGORY-PUBLIC-TRACKER,GFW"
+
+# Download topdomains (Cisco Umbrella top 1M)
+retry curl -fSL -o /tmp/top-1m.csv.zip http://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip
+unzip -o /tmp/top-1m.csv.zip -d /tmp
+cut -d"," -f2 /tmp/top-1m.csv >/tmp/topdomains.data
+rm /tmp/top-1m.csv.zip /tmp/top-1m.csv
+topdomain_size=$(wc -c </tmp/topdomains.data)
+if [ "$topdomain_size" -le 10000000 ]; then
+	echo "topdomains.data size too small: $topdomain_size (min: 10000000)"
+	exit 1
+fi
+topdomain_lines=$(wc -l </tmp/topdomains.data)
+if [ "$topdomain_lines" -le 500000 ]; then
+	echo "topdomains.data line count too low: $topdomain_lines (min: 500000)"
+	exit 1
+fi
+echo "topdomains.data validated: $topdomain_size bytes, $topdomain_lines lines"
 
 # Download and extract global_mark.dat
 retry git clone --depth 1 https://github.com/kkkgo/PaoPao-Pref.git /tmp/paopao-pref
@@ -109,7 +126,8 @@ xz -d /tmp/global_mark.xz
 
 # Inject PaoPaoDNS tags into geosite.dat
 mmdb -inject-geosite /tmp/geosite/geosite.dat -global-mark /tmp/global_mark
-mmdb -check-geosite /tmp/geosite/geosite.dat -check-tags "TRACKER,CATEGORY-PUBLIC-TRACKER,PAOPAODNS_GLOBAL_MARK,PAOPAODNS_CN_MARK,PAOPAODNS_SKIP_MARK"
+mmdb -inject-gfw-full /tmp/geosite/geosite.dat -topdomains /tmp/topdomains.data
+mmdb -check-geosite /tmp/geosite/geosite.dat -check-tags "TRACKER,CATEGORY-PUBLIC-TRACKER,PAOPAODNS_GLOBAL_MARK,PAOPAODNS_CN_MARK,PAOPAODNS_SKIP_MARK,PAOPAODNS_GFWFULL"
 
 # Re-compute checksums after injection
 sha256sum /tmp/geosite/geosite.dat | cut -d" " -f1 >/data/geosite.dat.sha256sum

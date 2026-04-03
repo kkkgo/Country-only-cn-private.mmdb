@@ -10,10 +10,13 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"go4.org/netipx"
 
 	"mmdb/chinaboundary"
 
@@ -21,6 +24,7 @@ import (
 	"github.com/maxmind/mmdbwriter/mmdbtype"
 	"github.com/oschwald/maxminddb-golang"
 	"github.com/v2fly/v2ray-core/v5/app/router/routercommon"
+	"github.com/v2fly/v2ray-core/v5/common/strmatcher"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -122,19 +126,16 @@ func checkMMDB(filename string) error {
 	return nil
 }
 
-func buildNets(entry *routercommon.GeoIP) []*net.IPNet {
-	var nets []*net.IPNet
-	for _, cidr := range entry.Cidr {
-		bits := 32
-		if len(cidr.Ip) != 4 {
-			bits = 128
+func cidrToIPSet(cidrs []*routercommon.CIDR) (*netipx.IPSet, error) {
+	var b netipx.IPSetBuilder
+	for _, cidr := range cidrs {
+		addr, ok := netip.AddrFromSlice(cidr.Ip)
+		if !ok {
+			continue
 		}
-		nets = append(nets, &net.IPNet{
-			IP:   cidr.Ip,
-			Mask: net.CIDRMask(int(cidr.Prefix), bits),
-		})
+		b.AddPrefix(netip.PrefixFrom(addr.Unmap(), int(cidr.Prefix)))
 	}
-	return nets
+	return b.IPSet()
 }
 
 func checkDat(filename string) error {
@@ -147,18 +148,39 @@ func checkDat(filename string) error {
 		return fmt.Errorf("failed to unmarshal dat: %v", err)
 	}
 
-	// Build lookup table: country code -> nets
-	codeNets := make(map[string][]*net.IPNet)
+	// Build per-code IPSets from routercommon.CIDR slices
+	codeSets := make(map[string]*netipx.IPSet)
 	for _, entry := range geoIPList.Entry {
 		code := strings.ToUpper(entry.CountryCode)
-		codeNets[code] = buildNets(entry)
+		s, err := cidrToIPSet(entry.Cidr)
+		if err != nil {
+			return fmt.Errorf("build IP set for %s: %v", code, err)
+		}
+		codeSets[code] = s
 	}
 
 	// Verify expected entries exist
 	for _, code := range []string{"CN", "PRIVATE", "CLOUDFLARE"} {
-		if _, ok := codeNets[code]; !ok {
+		if _, ok := codeSets[code]; !ok {
 			return fmt.Errorf("no %q entry found in dat file", code)
 		}
+	}
+
+	// lookupCode checks ip against each code in priority order.
+	// PRIVATE > CLOUDFLARE > CN mirrors the specificity order in the dat file
+	// (PRIVATE entries include host /32s that overlap with CN ranges).
+	lookupCode := func(ip net.IP) string {
+		a, ok := netip.AddrFromSlice(ip)
+		if !ok {
+			return ""
+		}
+		a = a.Unmap()
+		for _, code := range []string{"PRIVATE", "CLOUDFLARE", "CN"} {
+			if s, ok := codeSets[code]; ok && s.Contains(a) {
+				return code
+			}
+		}
+		return ""
 	}
 
 	failed := 0
@@ -167,20 +189,7 @@ func checkDat(filename string) error {
 		if ip == nil {
 			return fmt.Errorf("invalid test IP: %s", tc.IP)
 		}
-		// Find the most specific (longest prefix) match
-		got := ""
-		bestPrefix := -1
-		for code, nets := range codeNets {
-			for _, ipNet := range nets {
-				if ipNet.Contains(ip) {
-					ones, _ := ipNet.Mask.Size()
-					if ones > bestPrefix {
-						bestPrefix = ones
-						got = code
-					}
-				}
-			}
-		}
+		got := lookupCode(ip)
 		expected := strings.ToUpper(tc.Expected)
 		if got != expected {
 			fmt.Printf("FAIL: %s expected %q, got %q\n", tc.IP, expected, got)
@@ -198,7 +207,10 @@ func checkDat(filename string) error {
 }
 
 func mmdbLocal(cidr string) {
-	_, IPNet, _ := net.ParseCIDR(cidr)
+	_, IPNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		log.Fatalf("invalid private CIDR %s: %v", cidr, err)
+	}
 	writer.Insert(IPNet, PRIVATE)
 
 	ip := IPNet.IP
@@ -356,12 +368,21 @@ func importCloudflare() {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("cloudflare api returned HTTP %d", resp.StatusCode)
+	}
+
 	var data cfIPsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		log.Fatalf("decode cloudflare ips: %v", err)
 	}
 	if !data.Success {
 		log.Fatal("cloudflare api returned success=false")
+	}
+
+	totalCIDRs := len(data.Result.IPv4CIDRs) + len(data.Result.IPv6CIDRs)
+	if totalCIDRs < 10 || totalCIDRs > 100 {
+		log.Fatalf("cloudflare CIDR count out of expected range: %d (expected 10-100)", totalCIDRs)
 	}
 
 	for _, cidr := range data.Result.IPv4CIDRs {
@@ -470,6 +491,113 @@ func injectGlobalMark(geositePath, globalMarkPath string) error {
 	return nil
 }
 
+func buildGfwMatcher(list *routercommon.GeoSiteList) (strmatcher.IndexMatcher, uint32, error) {
+	m := strmatcher.NewMphIndexMatcher()
+	var total uint32
+	for _, site := range list.Entry {
+		if strings.ToUpper(site.CountryCode) != "GFW" {
+			continue
+		}
+		for _, d := range site.Domain {
+			var t strmatcher.Type
+			switch d.Type {
+			case routercommon.Domain_Full:
+				t = strmatcher.Full
+			case routercommon.Domain_RootDomain:
+				t = strmatcher.Domain
+			case routercommon.Domain_Regex:
+				t = strmatcher.Regex
+			case routercommon.Domain_Plain:
+				t = strmatcher.Substr
+			default:
+				continue
+			}
+			matcher, err := t.NewDomainPattern(d.Value)
+			if err != nil {
+				return nil, 0, fmt.Errorf("build gfw matcher for %q: %v", d.Value, err)
+			}
+			m.Add(matcher)
+			total++
+		}
+	}
+	if total == 0 {
+		return nil, 0, fmt.Errorf("geosite:gfw not found or empty")
+	}
+	if err := m.Build(); err != nil {
+		return nil, 0, fmt.Errorf("build gfw index matcher: %v", err)
+	}
+	return m, total, nil
+}
+
+func injectGfwFull(geositePath, topdomainsPath string) error {
+	data, err := os.ReadFile(geositePath)
+	if err != nil {
+		return fmt.Errorf("read geosite.dat: %v", err)
+	}
+	var list routercommon.GeoSiteList
+	if err := proto.Unmarshal(data, &list); err != nil {
+		return fmt.Errorf("unmarshal geosite.dat: %v", err)
+	}
+
+	gfwMatcher, total, err := buildGfwMatcher(&list)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("geosite:gfw: %d rules loaded into MphIndexMatcher\n", total)
+
+	// Filter topdomains against geosite:gfw
+	f, err := os.Open(topdomainsPath)
+	if err != nil {
+		return fmt.Errorf("open topdomains: %v", err)
+	}
+	defer f.Close()
+
+	var gfwFullDomainList []*routercommon.Domain
+	seen := make(map[string]bool)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		domain := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		if domain == "" || seen[domain] {
+			continue
+		}
+		seen[domain] = true
+		if gfwMatcher.MatchAny(domain) {
+			gfwFullDomainList = append(gfwFullDomainList, &routercommon.Domain{
+				Type:  routercommon.Domain_Full,
+				Value: domain,
+			})
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("scan topdomains: %v", err)
+	}
+	fmt.Printf("PAOPAODNS_GFWFULL: matched %d domains from topdomains\n", len(gfwFullDomainList))
+	if len(gfwFullDomainList) == 0 {
+		return fmt.Errorf("no topdomains matched geosite:gfw — check if gfw rules or topdomains format changed")
+	}
+
+	// Remove existing PAOPAODNS_GFWFULL entry (idempotent)
+	var filtered []*routercommon.GeoSite
+	for _, entry := range list.Entry {
+		if strings.ToUpper(entry.CountryCode) != "PAOPAODNS_GFWFULL" {
+			filtered = append(filtered, entry)
+		}
+	}
+	list.Entry = append(filtered, &routercommon.GeoSite{
+		CountryCode: "PAOPAODNS_GFWFULL",
+		Domain:      gfwFullDomainList,
+	})
+
+	outData, err := proto.Marshal(&list)
+	if err != nil {
+		return fmt.Errorf("marshal geosite.dat: %v", err)
+	}
+	if err := os.WriteFile(geositePath, outData, 0644); err != nil {
+		return fmt.Errorf("write geosite.dat: %v", err)
+	}
+	return nil
+}
+
 func checkGeosite(filename string, mandatoryTags []string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -520,6 +648,8 @@ func main() {
 	checkDatPath := flag.String("check-dat", "", "check dat file with test IPs")
 	injectGeositePath := flag.String("inject-geosite", "", "path to geosite.dat to inject new tags into")
 	globalMarkPath := flag.String("global-mark", "", "path to decompressed global_mark text file")
+	injectGfwFullPath := flag.String("inject-gfw-full", "", "path to geosite.dat to inject PAOPAODNS_GFWFULL tag")
+	topdomainsPath := flag.String("topdomains", "", "path to topdomains file (one domain per line)")
 	flag.Parse()
 
 	if *checkPath != "" {
@@ -542,6 +672,17 @@ func main() {
 			log.Fatalf("inject global mark failed: %v", err)
 		}
 		fmt.Printf("global_mark tags injected into: %s\n", *injectGeositePath)
+		return
+	}
+
+	if *injectGfwFullPath != "" {
+		if *topdomainsPath == "" {
+			log.Fatal("-topdomains is required with -inject-gfw-full")
+		}
+		if err := injectGfwFull(*injectGfwFullPath, *topdomainsPath); err != nil {
+			log.Fatalf("inject gfw full failed: %v", err)
+		}
+		fmt.Printf("PAOPAODNS_GFWFULL injected into: %s\n", *injectGfwFullPath)
 		return
 	}
 
