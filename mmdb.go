@@ -323,6 +323,7 @@ func importCSV(filename string) {
 	}
 	defer file.Close()
 	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
 
 	for {
 		record, err := reader.Read()
