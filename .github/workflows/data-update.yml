@@ -15,11 +15,7 @@ jobs:
       uses: actions/checkout@main
     - name: Update data
       run: docker run -v $(pwd):/data -e YOUR_ACCOUNT_ID=${{ secrets.YOUR_ACCOUNT_ID }} -e YOUR_LICENSE_KEY=${{ secrets.YOUR_LICENSE_KEY }} ${{ secrets.AWS_MMDB_RUNNER }}
-    - uses: EndBug/add-and-commit@main
-      with:
-        author_name: Github Actions
-        author_email: actions@github.com
-        committer_email: actions@github.com
+    - uses: kkkgo/Git-Commit-Action@main
     - uses: kkkgo/Clean-Git-File-History-Action@main
       with:
         size_threshold: 10M
